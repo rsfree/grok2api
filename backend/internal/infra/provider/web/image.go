@@ -926,9 +926,22 @@ func buildImageEditPayload(prompt string, assets []string, aspectRatio string) m
 		imageToImage["aspectRatio"] = aspectRatio
 	}
 	return map[string]any{
+		// 本地补丁（2026-10-14 取证，上游 v3.1.8 仍未修）：浏览器
+		// chatCreateConversationAndRespondRaw 会给 body 强制加
+		// kind=CONVERSATION_KIND_IMAGINE（文本会话则是 _NORMAL）。
+		// 缺了它上游按普通会话处理。
+		"kind":      "CONVERSATION_KIND_IMAGINE",
 		"modelName": "imagine-image-edit", "message": prompt,
 		"enableImageStreaming": true, "enableSideBySide": true, "sendFinalMetadata": true,
 		"mediaGenInput": map[string]any{"imageToImage": imageToImage},
+		// 本地补丁：浏览器真实请求会带
+		// responseMetadata.modelConfigOverride.modelMap.imageEditModel="imagine"。
+		// 缺少它时上游不认 mediaGenInput.imageToImage，会退化成无关的默认出图。
+		"responseMetadata": map[string]any{
+			"modelConfigOverride": map[string]any{
+				"modelMap": map[string]any{"imageEditModel": "imagine"},
+			},
+		},
 	}
 }
 
